@@ -1,1 +1,1 @@
-python solver.py --input in
+python solver.py --input samples/in1

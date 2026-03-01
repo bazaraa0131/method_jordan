@@ -83,14 +83,13 @@ class Solver:
     def visualize(self):
         rows = self.e + 1
         cols = self.v + 1
-        width = 10
 
         # horizontal separator
-        sep = "_" * (cols * (width + 3) - 1)
+        sep = "_" * (cols * (Const.PRINT_TABLE_FORMAT_WIDTH + 3) - 1)
 
         for i in range(rows):
             for j in range(cols):
-                print(f"{self.table[i][j].get_value()!s:>{width}}", end="")
+                print(f"{self.table[i][j].get_value()!s:>{Const.PRINT_TABLE_FORMAT_WIDTH}}", end="")
                 if j < cols - 1:
                     print(" | ", end="")
             print()
@@ -103,7 +102,7 @@ class Solver:
         if len(self.anchor_col) == min(self.e, self.v):
             print("Бүх гол элементийг сонгосон байна.")
             return False
-        if row - 1 > self.e or col - 1 > self.v or row  - 1 < 0 or col - 1 < 0:
+        if row > self.e or col > self.v or row <= 0 or col <= 0:
             print("Дугаарлалт буруу байна.")
             return False
         if row in self.anchor_row:
@@ -172,16 +171,47 @@ class Solver:
             return True
         return False
     
-    def print_relations(self):
+    def is_rank_fin(self):
+
+        for i in range(1, self.e + 1):
+            for j in range(1, self.v + 1):
+                if i in self.anchor_row or j in self.anchor_col:
+                    continue
+                if self.table[i][j].get_value() != Fraction(0):
+                    return False
+        
+        return True
+    
+    def is_solveable(self):
+        
+        t = self.table
+
+        for i in range(1, self.e + 1):
+            if t[i][0].get_type() != Const.VALUE_CELL:
+                continue
+            accum = Fraction(0)
+
+            for j in range(1, self.v + 1):
+                if t[i][j].get_value() != Fraction(0):
+                    accum += t[i][j].get_value() * t[0][j].get_value()
+
+            if accum != t[i][0].get_value():
+                return False
+
+        return True
+
+    def print_relations(self, print_redundant_relations = False):
 
         print("\n")
-
-        width = 10
 
         t = self.table
 
         for i in range(1, self.e + 1):
-            print(f"{t[i][0].get_value()!s:>{width}}", end=" = ")
+
+            if not print_redundant_relations and t[i][0].get_type() != Const.VARIABLE_CELL:
+                continue
+
+            print(f"{t[i][0].get_value()!s:>{Const.PRINT_RELATION_FORMAT_WDITH}}", end=" = ")
 
             accum = Fraction(0)
 
@@ -191,9 +221,11 @@ class Solver:
                 if t[0][j].get_type() == Const.VALUE_CELL:
                     accum += t[i][j].get_value() * t[0][j].get_value()
                 else:
-                    relations.append(f"({t[i][j].get_value()!s:>{width}}) * {t[0][j].get_value()}")
+                    relations.append(f"({t[i][j].get_value()!s:>{Const.PRINT_RELATION_FORMAT_WDITH}}) * {t[0][j].get_value()}")
             
-            print(f"{accum!s:>{width}} + " + " + ".join(relations))
+            relation_str = " + " + " + ".join(relations) if relations else ""
+
+            print(f"{accum!s:>{Const.PRINT_RELATION_FORMAT_WDITH}}" + relation_str)
 
 
         
