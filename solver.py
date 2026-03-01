@@ -11,8 +11,18 @@ def main():
     args = parser.parse_args()
 
     solver = Utils.Solver(args.input_file==None , args.input_file)
-        
-    solver.visualize()
+
+    while True:
+        solver.visualize()
+
+        if solver.is_finished():
+            solver.print_relations()
+            break
+
+        while not solver.perform_step():
+            continue
+
+            
 
 
 if __name__ == "__main__":

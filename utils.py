@@ -1,6 +1,26 @@
+import copy
 from fractions import Fraction
 
 import const as Const
+
+class Cell:
+    def __init__(self, type=None, value=None):
+        self.type = type
+        self.value = value
+    def update_type(self, type):
+        self.type = type
+    def update_value(self, value):
+        self.value = value
+    def get_type(self):
+        return self.type
+    def get_value(self):
+        return self.value
+
+def strip_negation(cell: Cell):
+    cell.update_value(cell.get_value().strip('-'))
+
+def invert(frac: Fraction):
+    return Fraction(frac.denominator, frac.numerator)
 
 def read(from_input: bool = True, input_path: str | None = None):
     if from_input:
@@ -30,22 +50,15 @@ def read(from_input: bool = True, input_path: str | None = None):
     close()
     return e, v, mat, vec
 
-class Cell:
-    def __init__(self, type=None, value=None):
-        self.type = type
-        self.value = value
-    def update_type(self, type):
-        self.type = type
-    def update_value(self, value):
-        self.value = value
-    def get_type(self):
-        return self.type
-    def get_value(self):
-        return self.value
-
 class Solver:
     def __init__(self, from_input = True, input_path = None):
         e, v, mat, vec = read(from_input, input_path)
+
+        self.initial_mat = mat
+        self.initial_vec = vec
+
+        self.anchor_row = set()
+        self.anchor_col = set()
 
         self.e = e
         self.v = v
@@ -65,7 +78,7 @@ class Solver:
         for i in range(1, self.e + 1):
             for j in range(1, self.v + 1):
                 self.table[i][j].update_type(Const.COEFFICIENT_CELL)
-                self.table[i][j].update_value(mat[i - 1][j - 1])
+                self.table[i][j].update_value(mat[i - 1][j - 1] * (-1))
 
     def visualize(self):
         rows = self.e + 1
@@ -85,5 +98,106 @@ class Solver:
             if i < rows - 1:
                 print(sep)
 
-    def solve():
-        pass
+    def choose_anchor_element(self, row, col):
+
+        if len(self.anchor_col) == min(self.e, self.v):
+            print("Бүх гол элементийг сонгосон байна.")
+            return False
+        if row - 1 > self.e or col - 1 > self.v or row  - 1 < 0 or col - 1 < 0:
+            print("Дугаарлалт буруу байна.")
+            return False
+        if row in self.anchor_row:
+            print("Аль хэдийн сонгогдсон мөр байна.")
+            return False
+        if col in self.anchor_col:
+            print("Аль хэдийн сонгогдсон багана байна.")
+            return False
+        if self.table[row][col].get_value() == Fraction(0):
+            print("Гол элемент нь 0 байх боломжгүй.")
+            return False
+        
+        self.anchor_row.add(row)
+        self.anchor_col.add(col)
+        return True
+
+    def perform_step(self):
+
+        row, col = map(int, input("Гол элементээр сонгох элементийн мөр баганын дугаарыг оруулна уу: ").split())
+
+        succes = self.choose_anchor_element(row, col)
+        if not succes:
+            return False
+        
+        t = self.table
+
+        tmp_t = copy.deepcopy(t)
+        tmp_t[row][col].update_value(invert(t[row][col].get_value()))
+
+        for i in range(1, self.v + 1):
+            if i == col:
+                continue
+            tmp_t[row][i].update_value(
+                t[row][i].get_value() / t[row][col].get_value()
+            )
+
+        for i in range(1, self.e + 1):
+            if i == row:
+                continue
+            tmp_t[i][col].update_value(
+                -t[i][col].get_value() / t[row][col].get_value()
+            )
+
+        for i in range(1, self.e + 1):
+            for j in range(1, self.v + 1):
+                if i == row or j == col:
+                    continue
+
+                tmp_t[i][j].update_value(
+                    (t[i][j].get_value() * t[row][col].get_value()
+                    - t[i][col].get_value() * t[row][j].get_value())
+                    / t[row][col].get_value()
+                )
+        
+        tmp_t[row][0], tmp_t[0][col] = (tmp_t[0][col], tmp_t[row][0])
+
+        self.table = copy.deepcopy(tmp_t)
+
+        strip_negation(self.table[row][0])
+        self.table[0][col].update_value(-self.table[0][col].get_value())
+
+        return True
+
+    def is_finished(self):
+        if min(self.e, self.v) == len(self.anchor_col):
+            return True
+        return False
+    
+    def print_relations(self):
+
+        print("\n")
+
+        width = 10
+
+        t = self.table
+
+        for i in range(1, self.e + 1):
+            print(f"{t[i][0].get_value()!s:>{width}}", end=" = ")
+
+            accum = Fraction(0)
+
+            relations = []
+
+            for j in range(1, self.v + 1):
+                if t[0][j].get_type() == Const.VALUE_CELL:
+                    accum += t[i][j].get_value() * t[0][j].get_value()
+                else:
+                    relations.append(f"({t[i][j].get_value()!s:>{width}}) * {t[0][j].get_value()}")
+            
+            print(f"{accum!s:>{width}} + " + " + ".join(relations))
+
+
+        
+        
+        
+
+
