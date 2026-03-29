@@ -39,6 +39,11 @@ def read(from_input: bool = True, input_path: str | None = None):
     mat = [[Fraction() for _ in range(v)] for _ in range(e)]
     vec = [Fraction() for _ in range(e)]
 
+    # second line: column names
+    cols = list(map(str, src().split()))
+    if len(cols) != v:
+        raise ValueError(f"Expected {v} values on line 1, got {len(cols)}")
+
     # each line: v coefficients + 1 RHS
     for r in range(e):
         row = list(map(Fraction, src().split()))
@@ -48,14 +53,16 @@ def read(from_input: bool = True, input_path: str | None = None):
         vec[r] = row[v]
 
     close()
-    return e, v, mat, vec
+    return e, v, mat, vec, cols
 
 class Solver:
-    def __init__(self, from_input = True, input_path = None):
-        e, v, mat, vec = read(from_input, input_path)
+    def __init__(self, from_input = True, input_path = None, method = 2):
+        e, v, mat, vec, cols = read(from_input, input_path)
 
         self.initial_mat = mat
         self.initial_vec = vec
+
+        self.method = method
 
         self.anchor_row = set()
         self.anchor_col = set()
@@ -67,9 +74,12 @@ class Solver:
 
         self.table[0][0].update_value("#")
 
+        method_sep = 1 if method == 2 else -1
+
         for i in range(1, self.v + 1):
             self.table[0][i].update_type(Const.VARIABLE_CELL)
-            self.table[0][i].update_value(f"-x{i}")
+            # self.table[0][i].update_value(f"-x{i}")
+            self.table[0][i].update_value(cols[i - 1])
 
         for i in range(1, self.e + 1):
             self.table[i][0].update_type(Const.VALUE_CELL)
@@ -78,7 +88,7 @@ class Solver:
         for i in range(1, self.e + 1):
             for j in range(1, self.v + 1):
                 self.table[i][j].update_type(Const.COEFFICIENT_CELL)
-                self.table[i][j].update_value(mat[i - 1][j - 1] * (-1))
+                self.table[i][j].update_value(mat[i - 1][j - 1] * (-1) * method_sep)
 
     def visualize(self):
         rows = self.e + 1
@@ -126,24 +136,26 @@ class Solver:
         succes = self.choose_anchor_element(row, col)
         if not succes:
             return False
-        
+
         t = self.table
 
         tmp_t = copy.deepcopy(t)
         tmp_t[row][col].update_value(invert(t[row][col].get_value()))
 
+        method_sep = 1 if self.method == 2 else -1
+
         for i in range(1, self.v + 1):
             if i == col:
                 continue
             tmp_t[row][i].update_value(
-                t[row][i].get_value() / t[row][col].get_value()
+                method_sep * t[row][i].get_value() / t[row][col].get_value()
             )
 
         for i in range(1, self.e + 1):
             if i == row:
                 continue
             tmp_t[i][col].update_value(
-                -t[i][col].get_value() / t[row][col].get_value()
+                method_sep * -t[i][col].get_value() / t[row][col].get_value()
             )
 
         for i in range(1, self.e + 1):
