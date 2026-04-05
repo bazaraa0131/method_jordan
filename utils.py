@@ -174,7 +174,6 @@ class Solver:
         self.table = copy.deepcopy(tmp_t)
 
         strip_negation(self.table[row][0])
-        self.table[0][col].update_value(-self.table[0][col].get_value())
 
         return True
 
