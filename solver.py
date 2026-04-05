@@ -26,7 +26,10 @@ def main():
 
         if solver.is_rank_fin():
             if solver.is_finished():
-                solver.print_relations(args.redundant_rel)
+                if solver.is_solveable():
+                    solver.print_relations(args.redundant_rel)
+                else:
+                    print("Систем тэгшитгэл шийдгүй.")
             else:
                 if solver.is_solveable():
                     solver.print_relations(args.redundant_rel)
